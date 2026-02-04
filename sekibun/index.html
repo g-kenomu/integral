@@ -62,26 +62,26 @@
 
         // --- 無限演習用 (数III 標準レベル) ---
         const normalGens = [
-            (rng) => { // 基本合成
+            (rng) => { 
                 const a = getRandomInt(2, 5, rng);
                 const n = getRandomInt(3, 5, rng);
                 return { type: "基本", latex: `\\int (${a}x + 1)^{${n}} \\, dx`, hint: `\\((ax+b)^n\\)の形。係数 \\(\\frac{1}{a}\\) を忘れずにな。`, answer: `\\frac{1}{${a*(n+1)}} (${a}x + 1)^{${n+1}} + C`, xp: 20 };
             },
-            (rng) => { // 三角関数
+            (rng) => { 
                 const a = getRandomInt(2, 4, rng);
                 return { type: "三角関数", latex: `\\int \\sin(${a}x) \\, dx`, hint: `角度の係数が出る。sinを積分すると負の符号がつくぞ。`, answer: `-\\frac{1}{${a}} \\cos(${a}x) + C`, xp: 30 };
             },
-            (rng) => { // 積和公式
+            (rng) => { 
                 const a = getRandomInt(3, 5, rng);
                 const b = getRandomInt(1, 2, rng);
                 const sum = a + b;
                 const diff = a - b;
                 return { type: "積和の公式", latex: `\\int \\sin ${a}x \\cos ${b}x \\, dx`, hint: `積和の公式で和の形に直す。`, answer: `-\\frac{1}{2} \\left( \\frac{\\cos ${sum}x}{${sum}} + \\frac{\\cos ${diff}x}{${diff}} \\right) + C`, xp: 50 };
             },
-            (rng) => { // 部分積分 (x e^x)
+            (rng) => { 
                 return { type: "部分積分", latex: `\\int x e^x \\, dx`, hint: `\\(x\\)を微分側に、\\(e^x\\)を積分側に。`, answer: `(x-1)e^x + C`, xp: 40 };
             },
-            (rng) => { // 置換積分 (根号)
+            (rng) => { 
                 const a = getRandomInt(1, 3, rng);
                 return { type: "置換積分", latex: `\\int x \\sqrt{x^2+${a}} \\, dx`, hint: `中身 \\(x^2+${a}\\) の微分 \\(2x\\) が外にあることに注目。`, answer: `\\frac{1}{3}(x^2+${a})^{\\frac{3}{2}} + C`, xp: 45 };
             }
@@ -96,7 +96,33 @@
                 const a = getRandomInt(2, 4, rng);
                 return { type: "★難問(指数)", latex: `\\int \\frac{1}{e^x + ${a}} \\, dx`, hint: `分母分子に \\(e^{-x}\\) を掛けるか、部分分数分解のような変形を行う。`, answer: `\\frac{1}{${a}} (x - \\log(e^x + ${a})) + C`, xp: 130 };
             },
-            (rng) => ({ type: "★難問(置換)", latex: `\\int \\frac{1}{x \\log x} \\, dx`, hint: `\\(\\log x = t\\) と置換すると、\\(\\frac{1}{x}dx = dt\\) となる。`, answer: `\\log |\\log x| + C`, xp: 90 })
+            (rng) => ({ type: "★難問(置換)", latex: `\\int \\frac{1}{x \\log x} \\, dx`, hint: `\\(\\log x = t\\) と置換すると、\\(\\frac{1}{x}dx = dt\\) となる。`, answer: `\\log |\\log x| + C`, xp: 90 }),
+            (rng) => { // 分数関数 1/(x^3+1)
+                const a = getRandomInt(1, 2, rng); // a=1 or 2
+                const a3 = a*a*a;
+                const a2 = a*a;
+                return {
+                    type: "★難問(分数)",
+                    latex: `\\int \\frac{1}{x^3 + ${a3}} \\, dx`,
+                    hint: `因数分解 \\(x^3+${a}^3 = (x+${a})(x^2-${a}x+${a2})\\) を行い、部分分数分解する。計算量が非常に多い。`,
+                    answer: `\\frac{1}{${3*a2}} \\log|x+${a}| - \\frac{1}{${6*a2}} \\log(x^2-${a}x+${a2}) + \\frac{1}{${a2}\\sqrt{3}} \\tan^{-1}\\frac{2x-${a}}{\\sqrt{3}${a}} + C`,
+                    xp: 200
+                };
+            },
+            (rng) => ({ // x/cos^2 x
+                type: "★難問(部分)",
+                latex: `\\int \\frac{x}{\\cos^2 x} \\, dx`,
+                hint: `\\( (\\tan x)' = \\frac{1}{\\cos^2 x} \\) に注目して部分積分を行う。`,
+                answer: `x \\tan x + \\log |\\cos x| + C`,
+                xp: 130
+            }),
+            (rng) => ({ // e^sqrt(x)
+                type: "★難問(置換)",
+                latex: `\\int e^{\\sqrt{x}} \\, dx`,
+                hint: `\\(\\sqrt{x} = t\\) と置換する。\\(x=t^2, dx=2t dt\\) となり \\(\\int 2t e^t dt\\) に帰着。`,
+                answer: `2e^{\\sqrt{x}}(\\sqrt{x}-1) + C`,
+                xp: 130
+            })
         ];
 
         // --- 超難問用 (東大・京大・医学部レベル) ---
@@ -135,7 +161,36 @@
                 hint: `\\(\\sin x = \\frac{2t}{1+t^2}\\) (\\(t=\\tan(x/2)\\)) の置換、または \\(\\frac{\\sin x}{\\sin^4 x}\\) として \\(\\cos x = t\\) 置換からの部分分数分解。`, 
                 answer: `-\\frac{\\cos x}{2\\sin^2 x} + \\frac{1}{2} \\log \\left| \\tan \\frac{x}{2} \\right| + C`, 
                 xp: 350 
-            })
+            }),
+            (rng) => { // sqrt(x^2 + k)
+                const k = getRandomInt(1, 3, rng);
+                const k2 = k*k;
+                return {
+                    type: "🔥🔥超難問",
+                    latex: `\\int \\sqrt{x^2 + ${k2}} \\, dx`,
+                    hint: `\\(x + \\sqrt{x^2+${k2}} = t\\) と置換するか、部分積分 \\(1 \\cdot \\sqrt{\\dots}\\) で自分自身が出現する形に持ち込む。`,
+                    answer: `\\frac{1}{2} \\left( x\\sqrt{x^2+${k2}} + ${k2}\\log(x+\\sqrt{x^2+${k2}}) \\right) + C`,
+                    xp: 400
+                };
+            },
+            (rng) => ({ // 1/(sin x + cos x)
+                type: "🔥🔥超難問",
+                latex: `\\int \\frac{1}{\\sin x + \\cos x} \\, dx`,
+                hint: `三角関数の合成を行い \\(\\sqrt{2}\\sin(x+\\frac{\\pi}{4})\\) の形にする。その後 \\(\\int \\frac{1}{\\sin t} dt = \\frac{1}{2} \\log \\frac{1-\\cos t}{1+\\cos t}\\) 等を利用。`,
+                answer: `\\frac{1}{\\sqrt{2}} \\log \\left| \\tan \\left( \\frac{x}{2} + \\frac{\\pi}{8} \\right) \\right| + C`,
+                xp: 450
+            }),
+            (rng) => { // e^ax cos bx
+                const a = getRandomInt(1, 2, rng);
+                const b = getRandomInt(1, 3, rng);
+                return {
+                    type: "🔥🔥超難問",
+                    latex: `\\int e^{${a}x} \\cos ${b}x \\, dx`,
+                    hint: `部分積分を2回行い、元の積分 \\(I\\) が再び現れたら移項して解く方程式型。`,
+                    answer: `\\frac{e^{${a}x}}{${a*a+b*b}} (${a}\\cos ${b}x + ${b}\\sin ${b}x) + C`,
+                    xp: 350
+                };
+            }
         ];
 
         // --- Sound Effects (Web Audio API) ---
