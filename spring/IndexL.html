@@ -1,0 +1,178 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>春休み開発帝国ダッシュボード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20">
+
+    <div id="app">
+        <!-- Header -->
+        <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-10">
+            <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="bg-emerald-500 p-2 rounded-lg">
+                        <i data-lucide="rocket" class="w-6 h-6 text-slate-900"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">春休み開発帝国</h1>
+                        <p class="text-xs text-slate-400">毎日作って稼ぐ</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-sm font-medium">
+                    <div class="flex items-center gap-1 text-orange-400">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        <span>Day 1</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto px-4 py-6 space-y-8">
+            <!-- KPI Dashboard -->
+            <section class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group">
+                    <p class="text-slate-400 text-sm mb-1">リリース済みアプリ</p>
+                    <div id="shipped-count" class="text-3xl font-bold text-white flex items-baseline gap-2">0<span class="text-sm font-normal text-slate-500">本</span></div>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group">
+                    <p class="text-slate-400 text-sm mb-1">推定収益価値</p>
+                    <div id="total-revenue" class="text-3xl font-bold text-emerald-400 flex items-baseline gap-1">¥0</div>
+                </div>
+            </section>
+
+            <!-- Goal Progress -->
+            <section class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <div class="flex justify-between items-end mb-2">
+                    <h2 class="font-bold text-lg flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-5 h-5 text-emerald-500"></i>
+                        目標達成度 (目標 ¥100,000)
+                    </h2>
+                    <span id="progress-text" class="text-emerald-400 font-bold text-lg">0%</span>
+                </div>
+                <div class="w-full bg-slate-700 h-4 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="bg-emerald-500 h-full transition-all duration-1000 ease-out w-0 relative">
+                        <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Input Area -->
+            <section class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i data-lucide="code" class="w-6 h-6 text-blue-400"></i>
+                        次は何を作る？
+                    </h2>
+                    <button onclick="generateIdea()" class="text-xs bg-slate-700 hover:bg-slate-600 text-blue-300 px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors">
+                        <i data-lucide="lightbulb" class="w-3 h-3"></i>アイデアガチャ
+                    </button>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-idea" placeholder="例：AIを使った英語学習タイマー..." class="flex-1 bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+                    <button onclick="addProject()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-lg flex items-center gap-2 transition-all shadow-lg active:scale-95">
+                        <i data-lucide="plus" class="w-5 h-5"></i>追加
+                    </button>
+                </div>
+            </section>
+
+            <!-- List -->
+            <div id="project-list" class="space-y-4"></div>
+        </main>
+    </div>
+
+    <script>
+        let projects = JSON.parse(localStorage.getItem('dev-empire-projects')) || [];
+        const targetAmount = 100000;
+
+        function save() {
+            localStorage.setItem('dev-empire-projects', JSON.stringify(projects));
+            render();
+        }
+
+        function addProject() {
+            const input = document.getElementById('new-idea');
+            if (!input.value.trim()) return;
+            projects.unshift({
+                id: Date.now(),
+                title: input.value,
+                status: 'planned',
+                potential: Math.floor(Math.random() * 5000) + 1000
+            });
+            input.value = '';
+            save();
+        }
+
+        function deleteProject(id) {
+            projects = projects.filter(p => p.id !== id);
+            save();
+        }
+
+        function updateStatus(id, status) {
+            const p = projects.find(p => p.id === id);
+            if (p) p.status = status;
+            save();
+        }
+
+        function generateIdea() {
+            const targets = ['学生', '社会人', 'ゲーマー', '犬好き', 'ダイエット中'];
+            const types = ['タイマー', 'ToDo', '診断アプリ', '家計簿', 'AIチャット'];
+            const idea = `${targets[Math.floor(Math.random()*targets.length)]}向け${types[Math.floor(Math.random()*types.length)]}`;
+            document.getElementById('new-idea').value = idea;
+        }
+
+        function render() {
+            const list = document.getElementById('project-list');
+            list.innerHTML = '';
+            
+            let shippedCount = 0;
+            let revenue = 0;
+
+            projects.forEach(p => {
+                if (p.status === 'shipped') {
+                    shippedCount++;
+                    revenue += p.potential;
+                }
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border ${p.status === 'shipped' ? 'bg-slate-900 border-emerald-900/50 opacity-75' : 'bg-slate-800 border-slate-700'}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg ${p.status === 'shipped' ? 'text-emerald-400 line-through' : ''}">${p.title}</h3>
+                        <button onclick="deleteProject(${p.id})" class="text-slate-600 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="flex justify-between items-center mt-4">
+                        <div class="flex gap-2">
+                            ${['planned', 'building', 'shipped'].map(s => `
+                                <button onclick="updateStatus(${p.id}, '${s}')" class="px-2 py-1 rounded text-[10px] font-bold uppercase ${p.status === s ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-400'}">
+                                    ${s === 'planned' ? '構想' : s === 'building' ? '開発' : '完了'}
+                                </button>
+                            `).join('')}
+                        </div>
+                        ${p.status === 'shipped' ? `<span class="text-emerald-500 text-sm font-bold">¥${p.potential}</span>` : ''}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            document.getElementById('shipped-count').innerHTML = `${shippedCount}<span class="text-sm font-normal text-slate-500">本</span>`;
+            document.getElementById('total-revenue').innerText = `¥${revenue.toLocaleString()}`;
+            const percent = Math.min((revenue / targetAmount) * 100, 100);
+            document.getElementById('progress-text').innerText = `${percent.toFixed(1)}%`;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            
+            lucide.createIcons();
+        }
+
+        render();
+    </script>
+</body>
+</html>
