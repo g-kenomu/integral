@@ -1,20 +1,9 @@
 ﻿<!DOCTYPE html>
-
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="utf-8" />
-    <title></title>
-</head>
-<body>
-
-</body>
-</html>
-<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>積分マスター V3</title>
+    <title>積分マスター - 究極の計算演習アプリ</title>
     
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,17 +18,20 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
         .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
         .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
         
-        /* 難問モード用の赤黒テーマ */
-        .theme-hard {
-            --bg-color: #1a0505;
-            --text-color: #fca5a5;
-            --card-bg: #2b0b0b;
-            --accent: #ef4444;
+        .progress-bar { transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .stamp-anim { animation: stamp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes stamp {
+            0% { transform: scale(3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
+        /* 難問・超難問用のテーマカラー */
+        .bg-super-hard { background-color: #0f0202; }
+        .text-super-hard { color: #fecaca; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 transition-colors duration-500">
@@ -66,484 +58,297 @@
             }
         }
 
-        const getRandomInt = (min, max, rng = Math.random) => {
-            return Math.floor(rng() * (max - min + 1)) + min;
-        };
+        const getRandomInt = (min, max, rng = Math.random) => Math.floor(rng() * (max - min + 1)) + min;
 
-        // --- 通常問題 (Normal) ---
-        const normalGenerators = [
-            (rng) => { // (ax+b)^n
-                const a = getRandomInt(2, 5, rng) * (rng() > 0.5 ? 1 : -1);
-                const b = getRandomInt(1, 9, rng) * (rng() > 0.5 ? 1 : -1);
-                const n = getRandomInt(2, 5, rng);
-                const bStr = b > 0 ? `+${b}` : `${b}`;
-                return {
-                    id: `n1-${Date.now()}`,
-                    type: "基本",
-                    latex: `\\int (${a}x ${bStr})^{${n}} \\, dx`,
-                    hint: `塊の積分。\\((ax+b)^n\\) の形。\\(\\frac{1}{a}\\) を忘れずに。`,
-                    answer: `\\frac{1}{${Math.abs(a*(n+1))}} (${a}x ${bStr})^{${n+1}} + C`
-                };
-            },
-            (rng) => { // sin/cos
+        // --- 無限演習用 (数III 標準レベル) ---
+        const normalGens = [
+            (rng) => { // 基本合成
                 const a = getRandomInt(2, 5, rng);
-                const isSin = rng() > 0.5;
-                const func = isSin ? "sin" : "cos";
-                return {
-                    id: `n2-${Date.now()}`,
-                    type: "三角関数",
-                    latex: `\\int \\${func}(${a}x) \\, dx`,
-                    hint: `角度が \\(${a}x\\) なので、係数 \\(\\frac{1}{${a}}\\) が出ます。符号に注意。`,
-                    answer: isSin ? `-\\frac{1}{${a}} \\cos(${a}x) + C` : `\\frac{1}{${a}} \\sin(${a}x) + C`
-                };
+                const n = getRandomInt(3, 5, rng);
+                return { type: "基本", latex: `\\int (${a}x + 1)^{${n}} \\, dx`, hint: `\\((ax+b)^n\\)の形。係数 \\(\\frac{1}{a}\\) を忘れずにな。`, answer: `\\frac{1}{${a*(n+1)}} (${a}x + 1)^{${n+1}} + C`, xp: 20 };
             },
-            (rng) => { // e^x
-                const a = getRandomInt(2, 4, rng) * (rng() > 0.5 ? 1 : -1);
-                const b = getRandomInt(1, 5, rng);
-                const bStr = b > 0 ? `+${b}` : `-${b}`;
-                return {
-                    id: `n3-${Date.now()}`,
-                    type: "指数関数",
-                    latex: `\\int e^{${a}x ${bStr}} \\, dx`,
-                    hint: `合成関数の微分を考慮して係数調整。`,
-                    answer: `\\frac{1}{${a}} e^{${a}x ${bStr}} + C`
-                };
+            (rng) => { // 三角関数
+                const a = getRandomInt(2, 4, rng);
+                return { type: "三角関数", latex: `\\int \\sin(${a}x) \\, dx`, hint: `角度の係数が出る。sinを積分すると負の符号がつくぞ。`, answer: `-\\frac{1}{${a}} \\cos(${a}x) + C`, xp: 30 };
             },
-            (rng) => { // f'/f
+            (rng) => { // 積和公式
+                const a = getRandomInt(3, 5, rng);
+                const b = getRandomInt(1, 2, rng);
+                const sum = a + b;
+                const diff = a - b;
+                return { type: "積和の公式", latex: `\\int \\sin ${a}x \\cos ${b}x \\, dx`, hint: `積和の公式で和の形に直す。`, answer: `-\\frac{1}{2} \\left( \\frac{\\cos ${sum}x}{${sum}} + \\frac{\\cos ${diff}x}{${diff}} \\right) + C`, xp: 50 };
+            },
+            (rng) => { // 部分積分 (x e^x)
+                return { type: "部分積分", latex: `\\int x e^x \\, dx`, hint: `\\(x\\)を微分側に、\\(e^x\\)を積分側に。`, answer: `(x-1)e^x + C`, xp: 40 };
+            },
+            (rng) => { // 置換積分 (根号)
                 const a = getRandomInt(1, 3, rng);
-                return {
-                    id: `n4-${Date.now()}`,
-                    type: "対数型",
-                    latex: `\\int \\frac{x}{x^2 + ${a}} \\, dx`,
-                    hint: `分子が分母の微分に近い形（\\(f'/f\\)）。`,
-                    answer: `\\frac{1}{2} \\log(x^2 + ${a}) + C`
-                };
+                return { type: "置換積分", latex: `\\int x \\sqrt{x^2+${a}} \\, dx`, hint: `中身 \\(x^2+${a}\\) の微分 \\(2x\\) が外にあることに注目。`, answer: `\\frac{1}{3}(x^2+${a})^{\\frac{3}{2}} + C`, xp: 45 };
             }
         ];
 
-        // --- 難問 (Hard) ---
-        const hardGenerators = [
-            (rng) => { // 部分分数分解 1/(x^2 - a^2)
-                const a = getRandomInt(2, 5, rng);
-                const aa = a * a;
-                return {
-                    id: `h1-${Date.now()}`,
-                    type: "★難問（分数関数）",
-                    latex: `\\int \\frac{1}{x^2 - ${aa}} \\, dx`,
-                    hint: `分母を因数分解して、部分分数分解を行います。\\(\\frac{1}{x^2-a^2} = \\frac{1}{2a}(\\frac{1}{x-a} - \\frac{1}{x+a})\\) を利用。`,
-                    answer: `\\frac{1}{${2*a}} \\log \\left| \\frac{x-${a}}{x+${a}} \\right| + C`
-                };
+        // --- 難問用 (旧帝大 標準〜難レベル) ---
+        const hardGens = [
+            (rng) => ({ type: "★難問(2倍角)", latex: `\\int \\frac{1}{1 + \\cos x} \\, dx`, hint: `半角の公式の逆 \\(1+\\cos x = 2\\cos^2 \\frac{x}{2}\\) を使うのが最速。`, answer: `\\tan \\frac{x}{2} + C`, xp: 100 }),
+            (rng) => ({ type: "★難問(tan)", latex: `\\int \\tan^3 x \\, dx`, hint: `\\(\\tan^2 x = \\frac{1}{\\cos^2 x} - 1\\) を使って次数を下げる。`, answer: `\\frac{1}{2} \\tan^2 x + \\log |\\cos x| + C`, xp: 110 }),
+            (rng) => ({ type: "★難問(対数)", latex: `\\int (\\log x)^2 \\, dx`, hint: `部分積分を2回行う。根気勝負。`, answer: `x(\\log x)^2 - 2x\\log x + 2x + C`, xp: 120 }),
+            (rng) => {
+                const a = getRandomInt(2, 4, rng);
+                return { type: "★難問(指数)", latex: `\\int \\frac{1}{e^x + ${a}} \\, dx`, hint: `分母分子に \\(e^{-x}\\) を掛けるか、部分分数分解のような変形を行う。`, answer: `\\frac{1}{${a}} (x - \\log(e^x + ${a})) + C`, xp: 130 };
             },
-            (rng) => { // 部分積分（対数） log(ax)
-                const a = getRandomInt(2, 5, rng);
-                return {
-                    id: `h2-${Date.now()}`,
-                    type: "★難問（対数）",
-                    latex: `\\int \\log(${a}x) \\, dx`,
-                    hint: `\\(1 \\cdot \\log(${a}x)\\) と見て部分積分を行います。`,
-                    answer: `x \\log(${a}x) - x + C`
-                };
-            },
-            (rng) => { // 2回部分積分 x^2 e^x
-                return {
-                    id: `h3-${Date.now()}`,
-                    type: "★難問（部分積分）",
-                    latex: `\\int x^2 e^x \\, dx`,
-                    hint: `次数を下げるために、部分積分を2回繰り返します。`,
-                    answer: `(x^2 - 2x + 2)e^x + C`
-                };
-            },
-            (rng) => { // tan^3 x
-                return {
-                    id: `h_tan3-${Date.now()}`,
-                    type: "★難問（三角関数）",
-                    latex: `\\int \\tan^3 x \\, dx`,
-                    hint: `\\(\\tan^3 x = \\tan x (\\tan^2 x) = \\tan x (\\frac{1}{\\cos^2 x} - 1)\\) と変形します。前半は \\(\\tan x = t\\) と置換、後半は公式通りです。`,
-                    answer: `\\frac{1}{2} \\tan^2 x + \\log |\\cos x| + C`
-                };
-            },
-            (rng) => { // 1 / (1 + e^x)
-                return {
-                    id: `h_exp_frac-${Date.now()}`,
-                    type: "★難問（指数関数）",
-                    latex: `\\int \\frac{1}{1 + e^x} \\, dx`,
-                    hint: `分子と分母に \\(e^{-x}\\) を掛けるか、分子を \\(1 = (1+e^x) - e^x\\) と変形します。`,
-                    answer: `x - \\log(1 + e^x) + C`
-                };
-            },
-            (rng) => { // x^3 e^{x^2}
-                return {
-                    id: `h_sub_parts-${Date.now()}`,
-                    type: "★難問（複合）",
-                    latex: `\\int x^3 e^{x^2} \\, dx`,
-                    hint: `\\(x^2 = t\\) と置換すると \\(x^3 dx = x^2 \\cdot x dx = t \\cdot \\frac{1}{2} dt\\) となり、\\(\\int t e^t dt\\) の部分積分に帰着します。`,
-                    answer: `\\frac{1}{2} e^{x^2} (x^2 - 1) + C`
-                };
-            },
-            (rng) => { // 三角関数3乗 sin^3 x
-                const isSin = rng() > 0.5;
-                const func = isSin ? "sin" : "cos";
-                const invFunc = isSin ? "cos" : "sin";
-                return {
-                    id: `h4-${Date.now()}`,
-                    type: "★難問（三角関数）",
-                    latex: `\\int \\${func}^3 x \\, dx`,
-                    hint: `\\(\\${func}^2 x = 1 - \\${invFunc}^2 x\\) を利用して、\\(\\${func} x\\) を1つだけ分離します。`,
-                    answer: isSin 
-                        ? `- \\cos x + \\frac{1}{3} \\cos^3 x + C`
-                        : `\\sin x - \\frac{1}{3} \\sin^3 x + C`
-                };
-            }
+            (rng) => ({ type: "★難問(置換)", latex: `\\int \\frac{1}{x \\log x} \\, dx`, hint: `\\(\\log x = t\\) と置換すると、\\(\\frac{1}{x}dx = dt\\) となる。`, answer: `\\log |\\log x| + C`, xp: 90 })
         ];
+
+        // --- 超難問用 (東大・京大・医学部レベル) ---
+        const superHardGens = [
+            (rng) => ({ 
+                type: "🔥🔥超難問", 
+                latex: `\\int \\frac{1}{1+x^4} \\, dx`, 
+                hint: `因数分解の難問。\\(x^4+1 = (x^2+1)^2 - 2x^2 = (x^2+\\sqrt{2}x+1)(x^2-\\sqrt{2}x+1)\\) と変形し、部分分数分解を行う。計算地獄。`, 
+                answer: `\\frac{1}{2\\sqrt{2}} \\left( \\frac{1}{2} \\log \\frac{x^2+\\sqrt{2}x+1}{x^2-\\sqrt{2}x+1} + \\tan^{-1}(\\sqrt{2}x+1) + \\tan^{-1}(\\sqrt{2}x-1) \\right) + C`, 
+                xp: 500 
+            }),
+            (rng) => ({ 
+                type: "🔥🔥超難問", 
+                latex: `\\int \\sqrt{\\tan x} \\, dx`, 
+                hint: `\\(\\sqrt{\\tan x} = t\\) と置換する。\\(x = \\arctan(t^2)\\) より \\(dx = \\frac{2t}{1+t^4} dt\\)。\\(\\int \\frac{2t^2}{1+t^4} dt\\) に帰着させ、分母を因数分解する。`, 
+                answer: `\\frac{1}{\\sqrt{2}} \\left( \\tan^{-1}\\frac{\\sqrt{2}\\sqrt{\\tan x}}{\\tan x - 1} + \\frac{1}{2} \\log \\left| \\frac{\\tan x - \\sqrt{2}\\sqrt{\\tan x} + 1}{\\tan x + \\sqrt{2}\\sqrt{\\tan x} + 1} \\right| \\right) + C`, 
+                xp: 600 
+            }),
+            (rng) => ({ 
+                type: "🔥🔥超難問", 
+                latex: `\\int \\frac{\\log x}{(1+x)^2} \\, dx`, 
+                hint: `\\((1+x)^{-2}\\) を積分側、\\(\\log x\\) を微分側にして部分積分を行う。その後、部分分数分解が必要になる。`, 
+                answer: `-\\frac{\\log x}{1+x} + \\log|x| - \\log|1+x| + C`, 
+                xp: 300 
+            }),
+            (rng) => ({ 
+                type: "🔥🔥超難問", 
+                latex: `\\int e^x \\sin 2x \\, dx`, 
+                hint: `部分積分を2回繰り返して、元の形（\\(I\\)）が出たら移項して解く循環型。係数の処理を間違えやすい。`, 
+                answer: `\\frac{e^x}{5} (\\sin 2x - 2\\cos 2x) + C`, 
+                xp: 250 
+            }),
+            (rng) => ({ 
+                type: "🔥🔥超難問", 
+                latex: `\\int \\frac{1}{\\sin^3 x} \\, dx`, 
+                hint: `\\(\\sin x = \\frac{2t}{1+t^2}\\) (\\(t=\\tan(x/2)\\)) の置換、または \\(\\frac{\\sin x}{\\sin^4 x}\\) として \\(\\cos x = t\\) 置換からの部分分数分解。`, 
+                answer: `-\\frac{\\cos x}{2\\sin^2 x} + \\frac{1}{2} \\log \\left| \\tan \\frac{x}{2} \\right| + C`, 
+                xp: 350 
+            })
+        ];
+
+        // --- Sound Effects (Web Audio API) ---
+        const playSound = (freq, type = 'sine', duration = 0.1) => {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + duration);
+        };
 
         // --- Components ---
-
-        // 数式を1つ表示するコンポーネント (inline対応)
-        const MathDisplay = ({ latex, isHard, inline = false }) => {
-            const containerRef = useRef(null);
-            useEffect(() => {
-                if (window.katex && containerRef.current) {
-                    try {
-                        window.katex.render(latex, containerRef.current, {
-                            throwOnError: false,
-                            displayMode: !inline, // inlineならfalse
-                            macros: { "\\C": "C" }
-                        });
-                    } catch (e) { console.error(e); }
-                }
-            }, [latex, inline]);
-            
-            const baseClass = inline ? "inline-block mx-1" : `py-4 text-2xl md:text-3xl block text-center`;
-            const colorClass = isHard ? 'text-red-100' : 'text-slate-800';
-            // inline時は親の色を継承させるためcolorClassを適用しない
-            
-            return <span ref={containerRef} className={`${baseClass} ${!inline ? colorClass : ''}`}></span>;
+        const MathDisplay = ({ latex }) => {
+            const ref = useRef();
+            useEffect(() => { if (window.katex) window.katex.render(latex, ref.current, { displayMode: true }); }, [latex]);
+            return <div ref={ref}></div>;
         };
 
-        // 文章と数式が混ざったテキストをパースして表示するコンポーネント
-        const ParsedMathText = ({ text, isHard }) => {
-            if (!text) return null;
-            // \( ... \) で囲まれた部分を分割する
+        const ParsedText = ({ text }) => {
             const parts = text.split(/\\\((.*?)\\\)/g);
-            return (
-                <span className={isHard ? 'text-yellow-200' : 'text-yellow-900'}>
-                    {parts.map((part, i) => {
-                        // 偶数番目はテキスト、奇数番目は数式
-                        if (i % 2 === 1) {
-                            return <MathDisplay key={i} latex={part} isHard={isHard} inline={true} />;
-                        }
-                        return <span key={i}>{part}</span>;
-                    })}
-                </span>
-            );
+            return <span>{parts.map((p, i) => i % 2 === 1 ? <MathDisplay key={i} latex={p} /> : <span key={i}>{p}</span>)}</span>;
         };
-
-        const Icon = ({ name, className, size = 20 }) => {
-            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
-        };
-
-        // --- Main App ---
 
         function App() {
             const [problem, setProblem] = useState(null);
             const [showHint, setShowHint] = useState(false);
             const [showAnswer, setShowAnswer] = useState(false);
-            const [mode, setMode] = useState('daily'); // daily, random, hard, stats, saved
-            const [isCurrentSolved, setIsCurrentSolved] = useState(false); 
-            
-            const [userData, setUserData] = useState({
-                history: {}, 
-                totalSolved: 0,
-                streak: 0,
-                lastSolvedDate: null,
-                savedProblems: []
-            });
+            const [mode, setMode] = useState('daily');
+            const [solved, setSolved] = useState(false);
+            const [user, setUser] = useState({ level: 1, xp: 0, total: 0, history: {}, streak: 0 });
 
             useEffect(() => {
-                const savedData = localStorage.getItem('integral_master_data_v3');
-                if (savedData) setUserData(JSON.parse(savedData));
-                lucide.createIcons();
-                loadDailyProblem();
+                const saved = localStorage.getItem('integral_master_ultimate');
+                if (saved) setUser(JSON.parse(saved));
+                loadDaily();
             }, []);
 
             useEffect(() => {
-                lucide.createIcons();
-                localStorage.setItem('integral_master_data_v3', JSON.stringify(userData));
-                
-                // Theme switching
-                if (mode === 'hard') {
-                    document.body.classList.add('bg-slate-900', 'text-white');
-                    document.body.classList.remove('bg-slate-50', 'text-slate-900');
-                } else {
-                    document.body.classList.add('bg-slate-50', 'text-slate-900');
-                    document.body.classList.remove('bg-slate-900', 'text-white');
-                }
-            }, [userData, mode]);
+                localStorage.setItem('integral_master_ultimate', JSON.stringify(user));
+                if (window.lucide) window.lucide.createIcons();
+            }, [user, mode]);
 
-            const loadDailyProblem = () => {
-                setMode('daily');
-                resetView();
+            const loadDaily = () => {
+                setMode('daily'); setSolved(false); setShowHint(false); setShowAnswer(false);
+                const s = new Seeder(new Date().toISOString().slice(0, 10));
+                // 今日の問題は「超難問」から選出
+                setProblem(superHardGens[Math.floor(s.random() * superHardGens.length)](() => s.random()));
+            };
+
+            const loadRandom = () => {
+                setMode('random'); setSolved(false); setShowHint(false); setShowAnswer(false);
+                // 無限演習は「標準」から選出
+                setProblem(normalGens[Math.floor(Math.random() * normalGens.length)](Math.random));
+            };
+
+            const loadHard = () => {
+                setMode('hard'); setSolved(false); setShowHint(false); setShowAnswer(false);
+                // 難問モードは「難問」と「超難問」をミックス
+                const pool = [...hardGens, ...superHardGens];
+                setProblem(pool[Math.floor(Math.random() * pool.length)](Math.random));
+            };
+
+            const onSolve = () => {
+                if (solved) return;
+                playSound(523.25, 'triangle', 0.2);
+                setTimeout(() => playSound(659.25, 'triangle', 0.2), 100);
+                
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                
                 const today = new Date().toISOString().slice(0, 10);
-                const seeder = new Seeder(today);
-                const rng = () => seeder.random();
-                const genIndex = Math.floor(rng() * normalGenerators.length);
-                const p = normalGenerators[genIndex](rng);
-                p.isDaily = true;
-                setProblem(p);
-            };
+                let newXp = user.xp + problem.xp;
+                let newLevel = user.level;
+                const nextLevelXp = user.level * 100;
 
-            const loadRandomProblem = () => {
-                setMode('random');
-                resetView();
-                const rng = Math.random;
-                const genIndex = Math.floor(rng() * normalGenerators.length);
-                setProblem(normalGenerators[genIndex](rng));
-            };
-
-            const loadHardProblem = () => {
-                setMode('hard');
-                resetView();
-                const rng = Math.random;
-                const genIndex = Math.floor(rng() * hardGenerators.length);
-                const p = hardGenerators[genIndex](rng);
-                p.isHard = true; 
-                setProblem(p);
-            };
-
-            const resetView = () => {
-                setShowHint(false);
-                setShowAnswer(false);
-                setIsCurrentSolved(false);
-            };
-
-            const markAsSolved = () => {
-                if (!problem) return;
-                
-                confetti({
-                    particleCount: mode === 'hard' ? 200 : 100,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: mode === 'hard' ? ['#ef4444', '#f87171', '#ffffff'] : undefined
-                });
-
-                const today = new Date().toISOString().slice(0, 10);
-                const newUserData = { ...userData };
-                newUserData.totalSolved += 1;
-                
-                if (!newUserData.history[today]) {
-                    newUserData.history[today] = true;
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yStr = yesterday.toISOString().slice(0, 10);
-                    if (newUserData.lastSolvedDate === yStr) {
-                        newUserData.streak += 1;
-                    } else if (newUserData.lastSolvedDate !== today) {
-                        newUserData.streak = 1;
-                    }
-                    newUserData.lastSolvedDate = today;
+                if (newXp >= nextLevelXp) {
+                    newLevel += 1;
+                    newXp -= nextLevelXp;
+                    playSound(880, 'sine', 0.5);
                 }
-                setUserData(newUserData);
-                setIsCurrentSolved(true);
+
+                const newHistory = { ...user.history, [today]: true };
+                setUser({ ...user, level: newLevel, xp: newXp, total: user.total + 1, history: newHistory });
+                setSolved(true);
             };
 
-            const toggleSaveProblem = () => {
-                const newUserData = { ...userData };
-                const index = newUserData.savedProblems.findIndex(p => p.latex === problem.latex);
-                if (index >= 0) newUserData.savedProblems.splice(index, 1);
-                else newUserData.savedProblems.push(problem);
-                setUserData(newUserData);
-            };
+            const isHard = mode === 'hard' || mode === 'daily'; // Dailyもハードな見た目に
+            const progress = (user.xp / (user.level * 100)) * 100;
 
-            const isSaved = problem && userData.savedProblems.some(p => p.latex === problem.latex);
-            const isDailySolved = userData.history[new Date().toISOString().slice(0, 10)];
-            const isHardMode = mode === 'hard';
+            if (!problem) return null;
 
             return (
-                <div className={`min-h-screen pb-24 md:pb-10 font-sans ${isHardMode ? 'bg-slate-950 text-red-50' : 'bg-slate-50 text-slate-900'}`}>
+                <div className={`min-h-screen pb-20 transition-colors duration-500 ${isHard ? 'bg-super-hard text-super-hard' : 'bg-slate-50 text-slate-900'}`}>
                     
                     {/* Header */}
-                    <header className={`${isHardMode ? 'bg-slate-900 border-red-900/30' : 'bg-white border-slate-200'} border-b sticky top-0 z-20 transition-colors`}>
-                        <div className="max-w-2xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className={`p-2 rounded-lg shadow-sm ${isHardMode ? 'bg-red-600' : 'bg-indigo-600'}`}>
-                                    <Icon name={isHardMode ? "flame" : "sigma"} className="text-white" />
+                    <header className={`sticky top-0 z-30 border-b backdrop-blur-md ${isHard ? 'bg-black/50 border-red-900/30' : 'bg-white/80 border-slate-200'}`}>
+                        <div className="max-w-md mx-auto p-4">
+                            <div className="flex justify-between items-end mb-2">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-white ${isHard ? 'bg-red-800' : 'bg-indigo-600'}`}>
+                                        {user.level}
+                                    </div>
+                                    <span className="text-xs font-bold uppercase tracking-widest opacity-60">Level</span>
                                 </div>
-                                <div>
-                                    <h1 className="font-bold text-lg leading-tight tracking-tight">積分マスター</h1>
-                                    <p className={`text-[10px] font-medium ${isHardMode ? 'text-red-400' : 'text-slate-500'}`}>Day {userData.streak} 継続中</p>
-                                </div>
+                                <span className="text-[10px] font-mono opacity-50">{user.xp} / {user.level * 100} XP</span>
                             </div>
-                            <button onClick={() => setMode('stats')} className={`p-2 rounded-full transition-colors relative ${isHardMode ? 'hover:bg-red-900/30' : 'hover:bg-slate-100'}`}>
-                                <Icon name="trophy" className="text-yellow-500" />
-                                {userData.totalSolved > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
-                            </button>
+                            <div className="w-full h-1.5 bg-slate-200/20 rounded-full overflow-hidden">
+                                <div className={`h-full progress-bar ${isHard ? 'bg-red-600' : 'bg-indigo-500'}`} style={{ width: `${progress}%` }}></div>
+                            </div>
                         </div>
                     </header>
 
-                    <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-
-                        {/* Navigation Tabs */}
-                        <div className={`flex p-1 rounded-xl overflow-x-auto ${isHardMode ? 'bg-slate-900 border border-red-900/30' : 'bg-slate-200'}`}>
-                            <button onClick={loadDailyProblem} className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all whitespace-nowrap ${mode === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
-                                <Icon name="calendar" size={14} /> 今日
-                            </button>
-                            <button onClick={loadRandomProblem} className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all whitespace-nowrap ${mode === 'random' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
-                                <Icon name="dices" size={14} /> 演習
-                            </button>
-                            <button onClick={loadHardProblem} className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all whitespace-nowrap ${mode === 'hard' ? 'bg-red-600 text-white shadow-sm' : (isHardMode ? 'text-red-400 hover:text-red-300' : 'text-slate-500 hover:text-red-500')}`}>
-                                <Icon name="skull" size={14} /> 難問
-                            </button>
-                            <button onClick={() => setMode('saved')} className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all whitespace-nowrap ${mode === 'saved' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
-                                <Icon name="bookmark" size={14} /> 保存
-                            </button>
+                    <main className="max-w-md mx-auto p-4 mt-4 space-y-6">
+                        
+                        {/* Mode Select */}
+                        <div className={`flex p-1 rounded-2xl ${isHard ? 'bg-slate-900 border border-red-900/30' : 'bg-slate-200'}`}>
+                            <button onClick={loadDaily} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'daily' ? 'bg-red-900 text-white shadow-lg' : (isHard ? 'text-slate-500' : 'text-slate-500')}`}>今日の問題</button>
+                            <button onClick={loadRandom} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'random' ? 'bg-white text-indigo-600 shadow-lg' : 'text-slate-500'}`}>無限演習</button>
+                            <button onClick={loadHard} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'hard' ? 'bg-red-800 text-white shadow-lg' : 'text-slate-500'}`}>難問モード</button>
                         </div>
 
-                        {/* Content */}
-                        {mode === 'stats' ? (
-                            /* Stats View */
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-slate-900">
-                                    <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                        <Icon name="calendar-days" className="text-indigo-500" /> 学習記録
-                                    </h2>
-                                    <div className="text-center py-8">
-                                        <p className="text-4xl font-black text-indigo-600">{userData.totalSolved}</p>
-                                        <p className="text-sm text-slate-400">総正解数</p>
-                                    </div>
-                                </div>
-                                <div className="text-center">
-                                    <button onClick={loadDailyProblem} className="text-indigo-600 font-bold text-sm hover:underline">問題に戻る</button>
-                                </div>
+                        {/* Problem Card */}
+                        <div className={`rounded-[2.5rem] shadow-2xl border p-8 relative flex flex-col items-center min-h-[400px] justify-center transition-all ${isHard ? 'bg-slate-900 border-red-900/50 shadow-red-900/20' : 'bg-white border-slate-200'}`}>
+                            
+                            <div className="absolute top-6 left-6">
+                                <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${isHard ? 'bg-red-900/50 text-red-400' : 'bg-slate-100 text-slate-500'}`}>
+                                    {problem.type} • +{problem.xp} XP
+                                </span>
                             </div>
-                        ) : mode === 'saved' ? (
-                            /* Saved View */
-                            <div className="space-y-4 animate-in fade-in">
-                                <h2 className={`font-bold px-2 ${isHardMode ? 'text-red-200' : 'text-slate-700'}`}>保存した問題 ({userData.savedProblems.length})</h2>
-                                {userData.savedProblems.length === 0 ? (
-                                    <div className={`text-center py-12 rounded-2xl border border-dashed ${isHardMode ? 'text-slate-500 border-slate-800' : 'text-slate-400 bg-white border-slate-300'}`}>
-                                        <p>保存された問題はありません</p>
-                                    </div>
-                                ) : (
-                                    userData.savedProblems.map((p, i) => (
-                                        <div key={i} className={`p-4 rounded-xl shadow-sm border relative group ${isHardMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                                            <span className={`text-[10px] px-2 py-1 rounded-full ${p.isHard ? 'bg-red-900/50 text-red-300' : 'bg-slate-100 text-slate-500'}`}>{p.type}</span>
-                                            <div className="py-2 overflow-x-auto"><MathDisplay latex={p.latex} isHard={isHardMode} /></div>
-                                            <div className={`mt-2 pt-2 border-t flex justify-between items-center ${isHardMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                                                <button onClick={() => { setProblem(p); setMode(p.isHard ? 'hard' : 'random'); resetView(); }} className="text-xs font-bold text-indigo-500 hover:underline">解き直す</button>
-                                                <span className="text-[10px] opacity-50">Answer: Check in mode</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
+
+                            <div className="w-full overflow-x-auto py-10">
+                                <MathDisplay latex={problem.latex} />
                             </div>
-                        ) : (
-                            /* Problem View */
-                            <div className={`rounded-3xl shadow-lg border overflow-hidden relative min-h-[400px] flex flex-col animate-in zoom-in-95 duration-300 ${isHardMode ? 'bg-slate-900 border-red-900/50 shadow-red-900/20' : 'bg-white border-slate-200'}`}>
-                                
-                                {/* Card Header */}
-                                <div className="absolute top-0 left-0 w-full flex justify-between items-start p-5 z-10">
-                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${isHardMode ? 'bg-red-950 text-red-300 border-red-900' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                        {problem?.type || "Loading..."}
-                                    </span>
-                                    <div className="flex gap-2">
-                                        {mode === 'daily' && isDailySolved && (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                                                <Icon name="check-circle-2" size={12} /> 完了
-                                            </span>
-                                        )}
-                                        <button onClick={toggleSaveProblem} className={`p-2 rounded-full transition-colors ${isSaved ? 'text-pink-500 bg-pink-50' : (isHardMode ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:bg-slate-50')}`}>
-                                            <Icon name="bookmark" className={isSaved ? "fill-pink-500" : ""} />
-                                        </button>
+
+                            {showHint && (
+                                <div className={`w-full p-4 rounded-2xl mb-6 text-sm animate-in slide-in-from-top-4 ${isHard ? 'bg-red-950 border border-red-900/50 text-red-200' : 'bg-yellow-50 text-yellow-900 border border-yellow-100'}`}>
+                                    <div className="flex gap-2 mb-1">
+                                        <i data-lucide="lightbulb" className="w-4 h-4"></i>
+                                        <span className="font-bold uppercase text-[10px]">Hint</span>
                                     </div>
+                                    <ParsedText text={problem.hint} />
                                 </div>
+                            )}
 
-                                {/* Problem Body */}
-                                <div className="flex-1 flex flex-col items-center justify-center p-8 mt-8">
-                                    <p className={`text-xs font-bold tracking-widest uppercase mb-4 ${isHardMode ? 'text-red-500' : 'text-slate-400'}`}>
-                                        {isHardMode ? 'WARNING: CHALLENGE MODE' : 'Challenge'}
-                                    </p>
-                                    {problem && <MathDisplay latex={problem.latex} isHard={isHardMode} />}
+                            {showAnswer && (
+                                <div className={`w-full p-6 rounded-2xl mb-8 border animate-in zoom-in-95 ${isHard ? 'bg-black border-red-900/50' : 'bg-indigo-50 border-indigo-100'}`}>
+                                    <p className="text-[10px] font-bold opacity-50 uppercase text-center mb-4 tracking-widest">解答</p>
+                                    <MathDisplay latex={problem.answer} />
                                 </div>
+                            )}
 
-                                {/* Interaction Area */}
-                                <div className={`border-t ${isHardMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-                                    
-                                    {/* Hint Area */}
-                                    {showHint && (
-                                        <div className={`p-4 border-b animate-in slide-in-from-top-2 ${isHardMode ? 'bg-yellow-900/20 border-yellow-900/30' : 'bg-yellow-50 border-yellow-100'}`}>
-                                            <div className="flex gap-3">
-                                                <Icon name="lightbulb" className="text-yellow-600 shrink-0 mt-1" />
-                                                <div>
-                                                    <p className="text-xs font-bold text-yellow-600 uppercase mb-1">ヒント</p>
-                                                    <div className={`text-sm leading-relaxed ${isHardMode ? 'text-yellow-200' : 'text-yellow-900'}`}>
-                                                        <ParsedMathText text={problem.hint} isHard={isHardMode} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Answer Area */}
-                                    {showAnswer && (
-                                        <div className={`p-6 border-b animate-in fade-in ${isHardMode ? 'bg-red-950/30 border-red-900/30' : 'bg-indigo-50 border-indigo-100'}`}>
-                                            <p className={`text-xs font-bold uppercase mb-2 text-center ${isHardMode ? 'text-red-400' : 'text-indigo-500'}`}>解答</p>
-                                            <div className="flex justify-center scale-110"><MathDisplay latex={problem.answer} isHard={isHardMode} /></div>
-                                            
-                                            <div className="mt-6 text-center">
-                                                {/* 完了ボタン or 次の問題へボタンの切り替え */}
-                                                {!isCurrentSolved ? (
-                                                    <button 
-                                                        onClick={markAsSolved} 
-                                                        className={`font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all flex items-center gap-2 mx-auto ${isHardMode ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/50' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-200'}`}
-                                                    >
-                                                        <Icon name="check" /> 理解した！ (完了)
-                                                    </button>
-                                                ) : (
-                                                    (mode === 'random' || mode === 'hard') && (
-                                                        <button 
-                                                            onClick={() => mode === 'hard' ? loadHardProblem() : loadRandomProblem()} 
-                                                            className={`font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all flex items-center gap-2 mx-auto animate-pulse ${isHardMode ? 'bg-white text-red-900 hover:bg-red-100' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
-                                                        >
-                                                            <Icon name="arrow-right" /> 次の問題へ
-                                                        </button>
-                                                    )
-                                                )}
-                                                {!isCurrentSolved && <p className="text-[10px] opacity-50 mt-2">実績に追加されます</p>}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Control Bar */}
-                                    <div className={`grid grid-cols-2 gap-px ${isHardMode ? 'bg-slate-800' : 'bg-slate-200'}`}>
-                                        <button 
-                                            onClick={() => setShowHint(!showHint)}
-                                            className={`p-4 flex items-center justify-center gap-2 text-sm font-bold transition-colors ${isHardMode ? 'bg-slate-900 text-slate-400 hover:bg-slate-800' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                                        >
-                                            <Icon name="lightbulb" size={18} className={showHint ? "fill-yellow-400 text-yellow-400" : ""} />
-                                            {showHint ? 'ヒントを隠す' : 'ヒント'}
-                                        </button>
-                                        <button 
-                                            onClick={() => setShowAnswer(!showAnswer)}
-                                            className={`p-4 flex items-center justify-center gap-2 text-sm font-bold transition-colors ${
-                                                showAnswer 
-                                                    ? (isHardMode ? 'bg-red-950 text-red-200' : 'bg-slate-800 text-white') 
-                                                    : (isHardMode ? 'bg-slate-900 text-red-400 hover:bg-slate-800' : 'bg-white text-indigo-600 hover:bg-slate-50')
-                                            }`}
-                                        >
-                                            {showAnswer ? <><Icon name="eye-off" size={18} /> 閉じる</> : <><Icon name="eye" size={18} /> 答えを見る</>}
-                                        </button>
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-2 gap-3 w-full">
+                                <button onClick={() => { setShowHint(!showHint); playSound(440, 'sine', 0.05); }} className={`p-4 rounded-2xl text-xs font-bold transition-all ${isHard ? 'bg-slate-800 text-red-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                    ヒント
+                                </button>
+                                <button onClick={() => { setShowAnswer(!showAnswer); playSound(523, 'sine', 0.05); }} className={`p-4 rounded-2xl text-xs font-bold transition-all ${showAnswer ? (isHard ? 'bg-red-900' : 'bg-slate-800') : (isHard ? 'bg-red-600' : 'bg-indigo-600')} text-white shadow-lg`}>
+                                    {showAnswer ? '閉じる' : '答えを見る'}
+                                </button>
                             </div>
-                        )}
+
+                            {showAnswer && !solved && (
+                                <button onClick={onSolve} className={`w-full mt-4 p-5 rounded-2xl font-black text-lg shadow-xl animate-bounce transition-all ${isHard ? 'bg-gradient-to-r from-red-700 to-red-600 text-white shadow-red-900/50' : 'bg-emerald-500 text-white'}`}>
+                                    完答した！
+                                </button>
+                            )}
+
+                            {solved && (mode !== 'daily') && (
+                                <button onClick={mode === 'hard' ? loadHard : loadRandom} className="w-full mt-4 p-5 bg-slate-800 text-white rounded-2xl font-bold">
+                                    次の問題へ
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Stamp Collection */}
+                        <div className={`p-6 rounded-3xl border ${isHard ? 'bg-slate-900 border-red-900/30' : 'bg-white border-slate-200'}`}>
+                            <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
+                                <i data-lucide="check-circle" className={`w-4 h-4 ${isHard ? 'text-red-500' : 'text-emerald-500'}`}></i> 今週の記録
+                            </h2>
+                            <div className="flex justify-between">
+                                {[...Array(7)].map((_, i) => {
+                                    const date = new Date();
+                                    date.setDate(date.getDate() - (6 - i));
+                                    const dStr = date.toISOString().slice(0, 10);
+                                    const isDone = user.history[dStr];
+                                    return (
+                                        <div key={i} className="flex flex-col items-center gap-1">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${isDone ? (isHard ? 'bg-red-600 border-red-500 text-white stamp-anim' : 'bg-emerald-500 border-emerald-400 text-white stamp-anim') : 'bg-transparent border-slate-200/20'}`}>
+                                                {isDone ? <i data-lucide="check" className="w-5 h-5"></i> : <span className="text-[10px] opacity-20">{date.getDate()}</span>}
+                                            </div>
+                                            <span className="text-[8px] font-bold opacity-30">{(['日','月','火','水','木','金','土'])[date.getDay()]}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                     </main>
+
+                    <footer className="mt-8 text-center px-8 text-[10px] leading-relaxed opacity-50">
+                        <p>© 2026 Integral Master v5.0 - Ultimate Edition</p>
+                    </footer>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+        setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 200);
     </script>
 </body>
 </html>
